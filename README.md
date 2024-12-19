@@ -22,43 +22,23 @@ The setup is fairly simple;
 using SharedPtrOfString = std::shared_ptr<std::string>;
 
 // Call `dummy` with a C-style Swift function (the "callback")
-inline void dummy(void* _Nonnull state, void(* _Nonnull callback)(void* _Nonnull, SharedPtrOfString)) {
+inline void dummy(void(* _Nonnull callback)(SharedPtrOfString)) {
   auto shared = std::make_shared<std::string>("HELLO!");
-  callback(state, shared);
+  callback(shared);
 }
 ```
 
-2. Create a Swift function that wraps the Callback in a `void*` so we can safely pass it to C++:
+2. Create a C-style Swift function that will be passed to C++ as a callback:
 
 ```swift
 func callCppFunc() {
-  // Swift Closures are wrapped in a Swift class,
-  // so we can convert it to Unmanaged / void*
-  class ClosureWrapper {
-    private let closure: (String) -> Void
-    init(closure: @escaping (String) -> Void) {
-      self.closure = closure
-    }
-    func call(value: String) {
-      closure(value)
-    }
-  }
-
-  let __closureWrapper = ClosureWrapper { value in
-    print("Got value from C++: \(value)")
-  }
-
-  // This holds the closure as a void*
-  let __state = Unmanaged.passRetained(__closureWrapper).toOpaque()
-  // This calls the actual closure as a static C-style function
-  // by unwrapping `state` (the ClosureWrapper) from the void*.
-  func __callback(state: UnsafeMutableRawPointer, value: SharedPtrOfString) {
-    let __closure = Unmanaged<ClosureWrapper>.fromOpaque(state).takeRetainedValue()
+  // This is a static C-style Swift function (@convention(c))
+  func __callback(value: SharedPtrOfString) {
     let string = String(value.pointee)
-    __closure.call(value: string)
+    print("Got from C++: \(string)")
   }
   // Call the C++ function
-  dummy(__state, __callback)
+  dummy(__callback)
 }
 ```
 

@@ -12,7 +12,7 @@
 
 using SharedPtrOfString = std::shared_ptr<std::string>;
 
-inline void dummy(void* _Nonnull state, void(* _Nonnull call)(void* _Nonnull, SharedPtrOfString)) {
+inline void dummy(void(* _Nonnull call)(SharedPtrOfString)) {
   auto shared = std::make_shared<std::string>("HELLO!");
-  call(state, shared);
+  call(shared);
 }
